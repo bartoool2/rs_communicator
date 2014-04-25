@@ -1,18 +1,17 @@
 import serial
 from mysql import MySQL
-from intRsCommands import IntRsCommands
+from intRsCommands import Event, Communicator
 from httpHandler import HTTPServer, HTTPHandler
+import json
 
 
 class RsCom:
     def __init__(self):
         pass
 
-    selected_port = 0
-    rsCom = IntRsCommands()
+    rsCom = Communicator()
 
     def init(self):
-        available_ports = {}
         self.send_command()
         # handler = HTTPHandler()
         # server = HTTPServer(('localhost', 8000), HTTPHandler)
@@ -23,28 +22,27 @@ class RsCom:
         # mysql = MySQL()
         # mysql.save_value(command, command)
 
-        # serial_port = serial.Serial(port=self.selected_port, baudrate=19200, timeout=5, writeTimeout=5)
-        # response = self.rsCom.read_event_list(serial_port)
-        response = self.rsCom.decode_event([0x8c,
-            0xbf,
-            0xcf,
-            0x42,
-            0x65,
-            0x84,
-            0x13,
-            0x0,
-            0x0,
-            0x6,
-            0x60,
-            0xa9,
-            0xff,
-            0xff,
-            0xff])
 
-        # response = self.rsCom.parse_response(serial_port.read(serial_port.inWaiting()))
+        Event.read_event_list(20)
+        # Event.get_event_by_index()
 
-        # for item in response:
-        #     print hex(item)
+        # event = self.rsCom.decode_event([0x8c,
+        #     0xbf,
+        #     0xcf,
+        #     0x42,
+        #     0x65,
+        #     0x84,
+        #     0x13,
+        #     0x0,
+        #     0x0,
+        #     0x6,
+        #     0x60,
+        #     0xa9,
+        #     0xff,
+        #     0xff,
+        #     0xff])
+
+        # print json.dumps(event, default=lambda o: o.__dict__)
 
 
 
