@@ -1,5 +1,11 @@
+import time
+from datetime import date
+import json
+
 class IntRsCommands:
-    zonesViolation = 0x00
+    readEvent = 0x8C
+
+
     zonesTamper = 0x01
     zonesTamperAlarm = 0x03
     zonesAlarmMemory = 0x04
@@ -69,3 +75,61 @@ class IntRsCommands:
     def ROL(self, x, n):
         return self.ROR(x, 16 - n)
 
+    def read_event_list(self, serial_port):
+        cmd = self.get_command_frame([self.readEvent, 0xFF, 0xFF, 0xFF])
+        serial_port.write(data=cmd)
+        time.sleep(1)
+        result = self.parse_response(serial_port.read(serial_port.inWaiting()))
+        serial_port.close()
+
+        return result
+
+    def decode_event(self, event_frame):
+        class Event(): pass
+
+        event = Event()
+
+        if(len(event_frame) == 15):
+
+            binary_byte_1 = '{0:08b}'.format(event_frame[1])
+            year_marker = binary_byte_1[0:2]
+            z = binary_byte_1[2]
+            e = binary_byte_1[3]
+            status2 = binary_byte_1[4:6]
+            status1 = binary_byte_1[6:8]
+            event_year = date.today().year
+            year_diff = int(year_marker, 2) - (event_year%4)
+            event_year = event_year + year_diff
+
+            binary_byte_2 = '{0:08b}'.format(event_frame[2])
+            event_class = binary_byte_2[0:3]
+            day = binary_byte_2[3:8]
+
+            binary_byte_3 = '{0:08b}'.format(event_frame[3])
+            month = binary_byte_3[0:4]
+            time_minutes = binary_byte_3[4:8]
+            event.date = str(event_year)+"-"+str(int(month, 2))+"-"+str(int(day, 2))
+
+            time_minutes += '{0:08b}'.format(event_frame[4])
+            time_minutes = int(time_minutes, 2)
+            event.time = str(time_minutes/60)+":"+str(time_minutes%60)
+
+            binary_byte_5 = '{0:08b}'.format(event_frame[5])
+            partition_no = binary_byte_5[0:5]
+            restore = binary_byte_5[5]
+            event_code = binary_byte_5[6:8]
+
+            event_code += '{0:08b}'.format(event_frame[6])
+
+            source_no = '{0:08b}'.format(event_frame[7])
+
+            binary_byte_8 = '{0:08b}'.format(event_frame[8])
+            object_no = binary_byte_8[0:3]
+            user_control_no = binary_byte_8[3:8]
+
+            event.index = [hex(event_frame[9]), hex(event_frame[10]), hex(event_frame[11])]
+            event.call_index = [hex(event_frame[12]), hex(event_frame[13]), hex(event_frame[14])]
+
+            print json.dumps(event, default=lambda o: o.__dict__)
+        else:
+            print "Frame does not contain enough elements"

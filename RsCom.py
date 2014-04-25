@@ -1,6 +1,5 @@
 import serial
 from mysql import MySQL
-import time
 from intRsCommands import IntRsCommands
 from httpHandler import HTTPServer, HTTPHandler
 
@@ -14,25 +13,39 @@ class RsCom:
 
     def init(self):
         available_ports = {}
-        # self.send_command()
+        self.send_command()
         # handler = HTTPHandler()
-        server = HTTPServer(('localhost', 8000), HTTPHandler)
-        print('Started http server')
-        server.serve_forever()
+        # server = HTTPServer(('localhost', 8000), HTTPHandler)
+        # print('Started http server')
+        # server.serve_forever()
 
     def send_command(self):
         # mysql = MySQL()
         # mysql.save_value(command, command)
 
-        serial_port = serial.Serial(port=self.selected_port, baudrate=19200, timeout=5, writeTimeout=5)
-        command = self.rsCom.get_command_frame([self.rsCom.zonesViolation])
-        serial_port.write(data=command)
-        time.sleep(1)
-        response = self.rsCom.parse_response(serial_port.read(serial_port.inWaiting()))
+        # serial_port = serial.Serial(port=self.selected_port, baudrate=19200, timeout=5, writeTimeout=5)
+        # response = self.rsCom.read_event_list(serial_port)
+        response = self.rsCom.decode_event([0x8c,
+            0xbf,
+            0xcf,
+            0x42,
+            0x65,
+            0x84,
+            0x13,
+            0x0,
+            0x0,
+            0x6,
+            0x60,
+            0xa9,
+            0xff,
+            0xff,
+            0xff])
 
-        for item in response:
-            print hex(item)
+        # response = self.rsCom.parse_response(serial_port.read(serial_port.inWaiting()))
 
-        serial_port.close()
+        # for item in response:
+        #     print hex(item)
+
+
 
 
