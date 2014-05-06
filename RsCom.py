@@ -1,5 +1,5 @@
 import serial
-from mysql import MySQL
+# from mysql import MySQL
 from intRsCommands import Event, Communicator
 from httpHandler import HTTPServer, HTTPHandler
 import json
@@ -9,12 +9,12 @@ class RsCom:
     def __init__(self):
         pass
 
-    rsCom = Communicator()
+    # rsCom = Communicator()
 
     def init(self):
         self.send_command()
         # handler = HTTPHandler()
-        # server = HTTPServer(('localhost', 8000), HTTPHandler)
+        # server = HTTPServer(('192.168.1.101', 8000), HTTPHandler)
         # print('Started http server')
         # server.serve_forever()
 

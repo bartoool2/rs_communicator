@@ -2,6 +2,8 @@ import time
 from datetime import date
 import serial
 import json
+import codecs
+import unicodedata as ud
 
 
 class Communicator:
@@ -104,6 +106,10 @@ class Communicator:
     def read_event():
         return Communicator.send_request([Communicator.readEvent, 0xFF, 0xFF, 0xFF])
 
+    @staticmethod
+    def system_arm():
+        Communicator.send_request()
+
     # def get_event_txt(self, cmd):
 
 
@@ -183,7 +189,11 @@ class Event(Communicator):
         if len(txt) >= 22:
             print "long description: ", txt[3]
             for i in range(6, len(txt)):
-                result_txt += str(unichr(txt[i]))
+                try:
+                    # result_txt += unichr(txt[i])
+                    result_txt += ud.(unichr(txt[i]))
+                except UnicodeEncodeError:
+                    pass
 
         return result_txt
 
