@@ -103,17 +103,13 @@ class Communicator:
         return result
 
     @staticmethod
-    def read_event():
-        return Communicator.send_request([Communicator.readEvent, 0xFF, 0xFF, 0xFF])
-
-    @staticmethod
     def system_arm():
         Communicator.send_request()
 
     # def get_event_txt(self, cmd):
 
 
-class Event(Communicator):
+class Event:
 
     _date = None
     _time = None
@@ -127,9 +123,9 @@ class Event(Communicator):
         pass
 
     @staticmethod
-    def get_event_by_index(index = [0xFF, 0xFF, 0xFF]):
-        print json.dumps([Communicator.readEvent] + index, default=lambda o: o.__dict__)
-        event_frame = Communicator.send_request([Communicator.readEvent] + index)
+    def get_event_by_index(index = [255, 255, 255]):
+        request_frame = [Communicator.readEvent] + index
+        event_frame = Communicator.send_request(request_frame)
         event = Event()
 
         if len(event_frame) == 15:
@@ -174,11 +170,24 @@ class Event(Communicator):
             event._index = [event_frame[9], event_frame[10], event_frame[11]]
             event._call_index = [event_frame[12], event_frame[13], event_frame[14]]
 
+            code_high_bitlist = [int(x) for x in list('{0:08b}'.format(event._code_high))]
+            code_low_bitlist = [int(x) for x in list('{0:08b}'.format(event._code_low))]
+            code_high_bitlist[0] = 1
+
+            event._code_high = 0
+            event._code_low = 0
+
+            for bit in code_high_bitlist:
+                event._code_high = (event._code_high << 1) | bit
+
+            for bit in code_low_bitlist:
+                event._code_low = (event._code_low << 1) | bit
+
             event._txt = Event.decode_event_txt(Communicator.send_request([Communicator.readEventTxt, event._code_high, event._code_low]))
 
             return event
         else:
-            print "Frame does not contain enough elements"
+            print "Failed to read frame, retrying..."
 
         return None
 
@@ -187,13 +196,11 @@ class Event(Communicator):
         result_txt = ''
 
         if len(txt) >= 22:
-            print "long description: ", txt[3]
             for i in range(6, len(txt)):
                 try:
-                    # result_txt += unichr(txt[i])
-                    result_txt += ud.(unichr(txt[i]))
+                    result_txt += str(unichr(txt[i]))
                 except UnicodeEncodeError:
-                    pass
+                    continue
 
         return result_txt
 
@@ -208,3 +215,26 @@ class Event(Communicator):
                 print json.dumps(current_event, default=lambda o: o.__dict__)
             else:
                 break
+
+
+class Zone(Communicator):
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def get_affected_zones(cmd):
+        read_zones = Communicator.send_request([cmd])
+        # zones = [0x06, 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x80]
+        zones = read_zones[1:len(read_zones)]
+        affected_zones = []
+        iter = 0
+
+        for byte in zones:
+            bits = [int(x) for x in list('{0:08b}'.format(byte))]
+            for i in range(0, 8):
+                if bits[i] == 1:
+                    affected_zones.append(8 - i + iter)
+            iter += 8
+
+        return sorted(affected_zones)

@@ -1,6 +1,6 @@
 import serial
-# from mysql import MySQL
-from intRsCommands import Event, Communicator
+from mysql import *
+from intRsCommands import *
 from httpHandler import HTTPServer, HTTPHandler
 import json
 
@@ -12,6 +12,9 @@ class RsCom:
     # rsCom = Communicator()
 
     def init(self):
+        # mysql = MySQL()
+        # request = mysql.get_request()
+        # print request.id
         self.send_command()
         # handler = HTTPHandler()
         # server = HTTPServer(('192.168.1.101', 8000), HTTPHandler)
@@ -22,8 +25,13 @@ class RsCom:
         # mysql = MySQL()
         # mysql.save_value(command, command)
 
+        # print 0x7f
+        # print Communicator.send_request([0x7f])
 
-        Event.read_event_list(20)
+        for i in range(0, 32):
+            print Zone.get_affected_zones(i)
+            # print Communicator.send_request([i])
+        # Event.read_event_list(20)
         # Event.get_event_by_index()
 
         # event = self.rsCom.decode_event([0x8c,
