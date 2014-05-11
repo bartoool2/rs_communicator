@@ -12,6 +12,9 @@ class Communicator:
     readEvent = 0x8C
     readEventTxt = 0x8F
 
+    arm = 0x80
+    disarm = 0x84
+    clear_alarm = 0x85
     zonesTamper = 0x01
     zonesTamperAlarm = 0x03
     zonesAlarmMemory = 0x04
@@ -217,7 +220,7 @@ class Event:
                 break
 
 
-class Zone(Communicator):
+class Zone:
 
     def __init__(self):
         pass
@@ -238,3 +241,26 @@ class Zone(Communicator):
             iter += 8
 
         return sorted(affected_zones)
+
+    @staticmethod
+    def disarm_zones(pass_code, zones_list = [1, 2, 3, 4]):
+        Zone.manipulate_zones(Communicator.disarm, pass_code, zones_list)
+
+    @staticmethod
+    def arm_zones(pass_code, zones_list = [1, 2, 3, 4]):
+        Zone.manipulate_zones(Communicator.arm, pass_code, zones_list)
+
+    @staticmethod
+    def manipulate_zones(operation, pass_code, zones_list):
+        manipulate_frame = [0, 0, 0, 0, 0, 0, 0, 0]
+        for zone in zones_list:
+            manipulate_frame[8 - zone] = 1
+
+        zones_code = 0
+        for bit in manipulate_frame:
+                zones_code = (zones_code << 1) | bit
+
+        pass_code_first_part = int('0x' + pass_code[0:2], 16)
+        pass_code_second_part = int('0x' + pass_code[2:4], 16)
+
+        Communicator.send_request([operation, pass_code_first_part, pass_code_second_part, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, zones_code, 0x00, 0x00, 0x00])

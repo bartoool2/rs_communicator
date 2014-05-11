@@ -22,35 +22,14 @@ class RsCom:
         # server.serve_forever()
 
     def send_command(self):
-        # mysql = MySQL()
-        # mysql.save_value(command, command)
+        mysql = MySQL()
+        mysql.start_app_process()
 
-        # print 0x7f
-        # print Communicator.send_request([0x7f])
+        # request = mysql.get_request()
+        # print request.additional_data
 
-        for i in range(0, 32):
-            print Zone.get_affected_zones(i)
-            # print Communicator.send_request([i])
-        # Event.read_event_list(20)
-        # Event.get_event_by_index()
-
-        # event = self.rsCom.decode_event([0x8c,
-        #     0xbf,
-        #     0xcf,
-        #     0x42,
-        #     0x65,
-        #     0x84,
-        #     0x13,
-        #     0x0,
-        #     0x0,
-        #     0x6,
-        #     0x60,
-        #     0xa9,
-        #     0xff,
-        #     0xff,
-        #     0xff])
-
-        # print json.dumps(event, default=lambda o: o.__dict__)
+        # current_event = Event.get_event_by_index([6, 32, 229])
+        # print json.dumps(current_event, default=lambda o: o.__dict__)
 
 
 

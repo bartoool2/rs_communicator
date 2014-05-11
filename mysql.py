@@ -1,5 +1,7 @@
 import pymysql
 from sqlobject import *
+from intRsCommands import *
+import json
 
 
 class MySQL:
@@ -81,24 +83,62 @@ class MySQL:
         return "UPDATE intrs_state SET value='" + value + "' WHERE command='" + command + "'"
 
     def get_request(self):
-        return RequestStackItem.select(RequestStackItem.q.status==RequestStackItem.STATUS_UNDONE).orderBy("priority DESC, time").limit(1).getOne()
+        result = None
+
+        try:
+            result = RequestStackItem.select(RequestStackItem.q.status==RequestStackItem.STATUS_UNDONE).orderBy("priority DESC, time").limit(1).getOne()
+        except:
+            pass
+
+        return result
+
+    def process_next_request(self):
+        request = self.get_request()
+        if request != None:
+            if request.request_code == RequestStackItem.CODE_DISARM:
+                print 'disarm zones request received'
+                try:
+                    Zone.disarm_zones(request.pass_code, json.loads(request.additional_data))
+                except Exception:
+                    pass
+            elif request.request_code == RequestStackItem.CODE_ARM:
+                print 'arm zones request received'
+                try:
+                    Zone.arm_zones(request.pass_code, json.loads(request.additional_data))
+                except Exception:
+                    pass
+            request.status = RequestStackItem.STATUS_DONE
+            print 'request done'
+        else:
+            print 'no event returned'
+
+    def start_app_process(self):
+        print 'process started'
+        while True:
+            self.process_next_request()
+            time.sleep(5)
 
 class RequestStackItem(SQLObject):
-
-    class sqlmeta:
-         table = "im_request_stack"
 
     STATUS_DONE = 1
     STATUS_UNDONE = 0
 
-    request_code = StringCol(length=45)
+    CODE_DISARM = 1
+    CODE_ARM = 2
+    CODE_CLEAR_ALARM = 3
+
+    request_code = IntCol(length=4)
     pass_code = StringCol(length=4)
+    additional_data = StringCol(length=100)
     status = IntCol(length=1, default=0)
     time = DateTimeCol()
     priority = IntCol(length=3, default=1)
 
+    class sqlmeta:
+         table = "im_request_stack"
 
-class Zone(SQLObject):
+
+class ZoneItem(SQLObject):
 
     class sqlmeta:
          table = "im_zone"
