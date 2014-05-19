@@ -112,11 +112,34 @@ class MySQL:
         else:
             print 'no event returned'
 
+        zones_to_check = [1, 2, 3, 4]
+        for state_code in Communicator.updateZonesState:
+            command = Communicator.updateZonesState[state_code]
+            zones_affected = Zone.get_affected_zones(command)
+
+            if len(zones_affected) > 0:
+                for zone_no in zones_affected:
+                    zones_to_check.remove(zone_no)
+                    print 'zone_no: ' + str(zone_no)
+                    try:
+                        found_zone = ZoneItem.select(ZoneItem.q.number==zone_no).limit(1).getOne()
+                        found_zone.status = state_code
+                    except:
+                        pass
+
+        for checked_zone_no in zones_to_check:
+            try:
+                zone = ZoneItem.select(ZoneItem.q.number==checked_zone_no).limit(1).getOne()
+                zone.status = ZoneItem.STATE_DISARMED
+            except:
+                pass
+
     def start_app_process(self):
         print 'process started'
         while True:
             self.process_next_request()
             time.sleep(5)
+
 
 class RequestStackItem(SQLObject):
 
@@ -140,6 +163,19 @@ class RequestStackItem(SQLObject):
 
 class ZoneItem(SQLObject):
 
+    STATE_DISARMED = 1
+    STATE_ARMED = 2
+    STATE_TIME_TO_ENTER = 3
+    STATE_TIME_TO_EXIT = 4
+    STATE_ALARM = 7
+    STATE_FIRE = 8
+    STATE_ALARM_MEMORY = 9
+    STATE_FIRE_MEMORY = 10
+
+    number = IntCol(length=4)
+    name = StringCol(length=45)
+    status = IntCol(length=3)
+
     class sqlmeta:
-         table = "im_zone"
+         table = "im_zones"
 

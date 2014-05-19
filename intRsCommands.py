@@ -15,31 +15,33 @@ class Communicator:
     arm = 0x80
     disarm = 0x84
     clear_alarm = 0x85
-    zonesTamper = 0x01
-    zonesTamperAlarm = 0x03
-    zonesAlarmMemory = 0x04
-    zonesTamperAlarmMemory = 0x05
-    zonesBypass = 0x06
-    zonesNoViolationTrouble = 0x07
-    zonesLongViolationTrouble = 0x08
-    armedPartitionsSuppressed = 0x09
-    armedPartitionsReally = 0x0A
-    partitionsArmedInMode = 0x0B
-    partitionsArmedInMode = 0x0C
-    partitionsWithFirstCodeEntered = 0x0D
+
+    armedPartitions = 0x0A
     partitionsEntryTime = 0x0E
-    partitionsExitTime = 0x0F
-    partitionsExitTime = 0x10
-    partitionsTemporaryBlocked = 0x11
-    partitionsBlockedForGuardRound = 0x12
+    partitionsExitTimeOver10Sec = 0x0F
+    partitionsExitTimeUnder10Sec = 0x10
     partitionsAlarm = 0x13
     partitionsFireAlarm = 0x14
     partitionsAlarmMemory = 0x15
     partitionsFireAlarmMemory = 0x16
-    outputsState = 0x17
-    doorsOpened = 0x18
-    doorsOpenedLong = 0x19
-    RTCAndBasicStatusBits = 0x9A
+
+    stateArmed = 2
+    stateTimeToEnter = 3
+    stateTimeToExit = 4
+    stateAlarm = 7
+    stateFire = 8
+    stateAlarmMemory = 9
+    stateFireMemory = 10
+
+    updateZonesState = {
+        stateArmed: armedPartitions,
+        stateTimeToEnter: partitionsEntryTime,
+        stateTimeToExit: partitionsExitTimeOver10Sec,
+        stateAlarm: partitionsAlarm,
+        stateFire: partitionsFireAlarm,
+        stateAlarmMemory: partitionsAlarmMemory,
+        stateFireMemory: partitionsFireAlarmMemory
+    }
 
     def __init__(self):
         pass

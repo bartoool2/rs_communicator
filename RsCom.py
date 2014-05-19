@@ -25,6 +25,10 @@ class RsCom:
         mysql = MySQL()
         mysql.start_app_process()
 
+        # for i in range(9, 24):
+        #     print i
+        #     print Communicator.send_request([i])
+
         # request = mysql.get_request()
         # print request.additional_data
 
