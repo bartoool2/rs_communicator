@@ -119,7 +119,11 @@ class MySQL:
 
             if len(zones_affected) > 0:
                 for zone_no in zones_affected:
-                    zones_to_check.remove(zone_no)
+                    if zone_no in zones_to_check:
+                        print 'number present'
+                        zones_to_check.remove(zone_no)
+                    else:
+                        print 'number not on the list'
                     print 'zone_no: ' + str(zone_no)
                     try:
                         found_zone = ZoneItem.select(ZoneItem.q.number==zone_no).limit(1).getOne()
