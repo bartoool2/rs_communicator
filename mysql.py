@@ -17,36 +17,11 @@ class MySQL:
     def __init__(self):
         connection = connectionForURI('mysql://' + MySQL.DB_USER + ':' + MySQL.DB_PASS + '@' + MySQL.DB_HOST + '/' + MySQL.DB_NAME)
         sqlhub.processConnection = connection
-        # pass
-
-    # def execute_query(self, query, type):
-    #     conn = pymysql.connect(host=MySQL.DB_HOST, port=3306, user=MySQL.DB_USER, passwd=MySQL.DB_PASS, db=MySQL.DB_NAME)
-    #
-    #     cur = conn.cursor()
-
-        # query = self.insert_builder("intrs_state", {
-        #     "command": {"value": command, "type": str},
-        #     "value": {"value": value, "type": str},
-        # })
-
-        # query = self.update_builder(command, value)
-        #
-        # print query
-        # cur.execute(query)
-        # conn.commit()
-        #
-        # cur.close()
-        # conn.close()
 
     def save_value(self, command, value):
         conn = pymysql.connect(host=MySQL.DB_HOST, port=3306, user=MySQL.DB_USER, passwd=MySQL.DB_PASS, db=MySQL.DB_NAME)
 
         cur = conn.cursor()
-
-        # query = self.insert_builder("intrs_state", {
-        #     "command": {"value": command, "type": str},
-        #     "value": {"value": value, "type": str},
-        # })
 
         query = self.update_builder(command, value)
 
@@ -107,6 +82,12 @@ class MySQL:
                     Zone.arm_zones(request.pass_code, json.loads(request.additional_data))
                 except Exception:
                     pass
+            elif request.request_code == RequestStackItem.CODE_READ_USERS_LIST:
+                print 'read users list request received'
+                try:
+                    IntegraUser.save_users_list(request.pass_code, json.loads(request.additional_data))
+                except Exception:
+                    pass
             request.status = RequestStackItem.STATUS_DONE
             print 'request done'
         else:
@@ -120,11 +101,8 @@ class MySQL:
             if len(zones_affected) > 0:
                 for zone_no in zones_affected:
                     if zone_no in zones_to_check:
-                        print 'number present'
                         zones_to_check.remove(zone_no)
-                    else:
-                        print 'number not on the list'
-                    print 'zone_no: ' + str(zone_no)
+
                     try:
                         found_zone = ZoneItem.select(ZoneItem.q.number==zone_no).limit(1).getOne()
                         found_zone.status = state_code
@@ -153,6 +131,7 @@ class RequestStackItem(SQLObject):
     CODE_DISARM = 1
     CODE_ARM = 2
     CODE_CLEAR_ALARM = 3
+    CODE_READ_USERS_LIST = 4
 
     request_code = IntCol(length=4)
     pass_code = StringCol(length=4)
@@ -182,4 +161,38 @@ class ZoneItem(SQLObject):
 
     class sqlmeta:
          table = "im_zones"
+
+
+class IntegraUser(SQLObject):
+
+    number = IntCol(length=4)
+    type = IntCol(length=3)
+    name = StringCol(length=20)
+    rights_1 = IntCol(length=11)
+    rights_2 = IntCol(length=11)
+    rights_3 = IntCol(length=11)
+
+    class sqlmeta:
+         table = "im_integra_users"
+
+    @staticmethod
+    def save_users_list(pass_code, data):
+        users = User.read_users_list(data, pass_code)
+
+        for user in users:
+            try:
+                IntegraUser(number=user, type=None, name=None)
+            except:
+                pass
+
+    @staticmethod
+    def save_user(pass_code, data):
+        user = User.read_user(data, pass_code)
+
+        integra_user = IntegraUser.select(IntegraUser.q.number==user._number).limit(1).getOne()
+        integra_user.type = user._type
+        integra_user.name = user._name
+        integra_user.rights_1 = user._rights_1
+        integra_user.rights_2 = user._rights_2
+        integra_user.rights_3 = user._rights_3
 

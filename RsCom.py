@@ -9,21 +9,15 @@ class RsCom:
     def __init__(self):
         pass
 
-    # rsCom = Communicator()
-
     def init(self):
-        # mysql = MySQL()
-        # request = mysql.get_request()
-        # print request.id
         self.send_command()
-        # handler = HTTPHandler()
-        # server = HTTPServer(('192.168.1.101', 8000), HTTPHandler)
-        # print('Started http server')
-        # server.serve_forever()
 
     def send_command(self):
         mysql = MySQL()
-        mysql.start_app_process()
+        IntegraUser.save_user("5272", "1")
+
+        # mysql.start_app_process()
+        # User.parse_user_data()
 
         # for i in range(9, 24):
         #     print i

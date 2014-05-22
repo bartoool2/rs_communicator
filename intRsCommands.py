@@ -43,6 +43,9 @@ class Communicator:
         stateFireMemory: partitionsFireAlarmMemory
     }
 
+    readUsersList = 0xE2
+    readUser = 0xE1
+
     def __init__(self):
         pass
 
@@ -100,7 +103,7 @@ class Communicator:
 
         # print "Sending request..."
         serial_port.write(data=cmd)
-        time.sleep(0.5)
+        time.sleep(2)
         result = Communicator.parse_response(serial_port.read(serial_port.inWaiting()))
         # print "Response received"
 
@@ -232,6 +235,10 @@ class Zone:
         read_zones = Communicator.send_request([cmd])
         # zones = [0x06, 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x80]
         zones = read_zones[1:len(read_zones)]
+        return Zone.zones_bytes_to_list(zones)
+
+    @staticmethod
+    def zones_bytes_to_list(zones):
         affected_zones = []
         iter = 0
 
@@ -266,3 +273,64 @@ class Zone:
         pass_code_second_part = int('0x' + pass_code[2:4], 16)
 
         Communicator.send_request([operation, pass_code_first_part, pass_code_second_part, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, zones_code, 0x00, 0x00, 0x00])
+
+
+class User:
+
+    _number = None
+    _zones = None
+    _type = None
+    _rights_1 = None
+    _rights_2 = None
+    _rights_3 = None
+    _name = None
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def read_user(user_number, pass_code):
+        # data = [224,
+        #         255,
+        #         1, 1,
+        #         15, 0, 0, 0,
+        #         32,
+        #         0,
+        #         255, 255, 255,
+        #         83, 101, 114, 119, 105, 115, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+        #         255]
+
+        pass_code_first_part = int('0x' + pass_code[0:2], 16)
+        pass_code_second_part = int('0x' + pass_code[2:4], 16)
+
+        data = Communicator.send_request([Communicator.readUser, pass_code_first_part, pass_code_second_part, 0xFF, 0xFF, int(user_number)])
+        user = User()
+
+        user._number = data[1]
+        user._zones = Zone.zones_bytes_to_list([data[4], data[5], data[6], data[7]])
+        user._type = int(('{0:08b}'.format(data[8]))[4:8], 2)
+
+        user._rights_1 = data[9]
+        user._rights_2 = data[10]
+        user._rights_3 = data[11]
+
+        user._name = ''
+        for i in range(12, 29):
+            try:
+                user._name += str(unichr(data[i]))
+            except UnicodeEncodeError:
+                continue
+
+        return user
+
+    @staticmethod
+    def read_users_list(user_number, pass_code):
+        pass_code_first_part = int('0x' + pass_code[0:2], 16)
+        pass_code_second_part = int('0x' + pass_code[2:4], 16)
+
+        users = Communicator.send_request([Communicator.readUsersList, pass_code_first_part, pass_code_second_part, 0xFF, 0xFF, int(user_number)])
+
+        return Zone.zones_bytes_to_list(users[2:32])
+
+
+
