@@ -11,6 +11,9 @@ class MySQL:
     DB_PASS = 'KyuG73QK'
     DB_NAME = 'bstokro_intrs'
 
+    MAX_ZONES_STEP = 10
+    MAX_USERS_STEP = 25
+
     QUERY_TYPE_SELECT = 0
     QUERY_TYPE_INSERT = 1
 
@@ -90,37 +93,66 @@ class MySQL:
                     pass
             request.status = RequestStackItem.STATUS_DONE
             print 'request done'
+            return True
         else:
             print 'no event returned'
-
-        zones_to_check = [1, 2, 3, 4]
-        for state_code in Communicator.updateZonesState:
-            command = Communicator.updateZonesState[state_code]
-            zones_affected = Zone.get_affected_zones(command)
-
-            if len(zones_affected) > 0:
-                for zone_no in zones_affected:
-                    if zone_no in zones_to_check:
-                        zones_to_check.remove(zone_no)
-
-                    try:
-                        found_zone = ZoneItem.select(ZoneItem.q.number==zone_no).limit(1).getOne()
-                        found_zone.status = state_code
-                    except:
-                        pass
-
-        for checked_zone_no in zones_to_check:
-            try:
-                zone = ZoneItem.select(ZoneItem.q.number==checked_zone_no).limit(1).getOne()
-                zone.status = ZoneItem.STATE_DISARMED
-            except:
-                pass
+            return False
 
     def start_app_process(self):
         print 'process started'
+        update_zones_step = 0
+        update_users_step = 0
+
         while True:
-            self.process_next_request()
-            time.sleep(5)
+            update_zones_step += 1
+            update_users_step += 1
+
+            request_received = self.process_next_request()
+            if request_received:
+                time.sleep(5)
+
+            if update_zones_step == MySQL.MAX_ZONES_STEP and request_received is False:
+                print 'updating zones info'
+                zones_to_check = [1, 2, 3, 4]
+                update_zones_step = 0
+
+                for state_code in Communicator.updateZonesState:
+                    command = Communicator.updateZonesState[state_code]
+                    zones_affected = Zone.get_affected_zones(command)
+
+                    if len(zones_affected) > 0:
+                        for zone_no in zones_affected:
+                            if zone_no in zones_to_check:
+                                zones_to_check.remove(zone_no)
+                            try:
+                                found_zone = ZoneItem.select(ZoneItem.q.number==zone_no).limit(1).getOne()
+                                found_zone.status = state_code
+                            except:
+                                pass
+
+                for checked_zone_no in zones_to_check:
+                    try:
+                        zone = ZoneItem.select(ZoneItem.q.number==checked_zone_no).limit(1).getOne()
+                        zone.status = ZoneItem.STATE_DISARMED
+                    except:
+                        pass
+                print 'zones info updated'
+
+            if update_users_step == MySQL.MAX_USERS_STEP and request_received is False:
+                print 'updating users info'
+                update_users_step = 0
+                if update_zones_step == 0:
+                    time.sleep(5)
+
+                # try:
+                    users = IntegraUser.save_users_list("5272", str(255))
+
+                    for user in users:
+                        IntegraUser.save_user("5272", user)
+                # except:
+                #     pass
+
+                print 'users info updated'
 
 
 class RequestStackItem(SQLObject):
@@ -167,13 +199,14 @@ class IntegraUser(SQLObject):
 
     number = IntCol(length=4)
     type = IntCol(length=3)
-    name = StringCol(length=20)
+    name = UnicodeCol(length=20)
     rights_1 = IntCol(length=11)
     rights_2 = IntCol(length=11)
     rights_3 = IntCol(length=11)
+    zones = StringCol(length=45)
 
     class sqlmeta:
-         table = "im_integra_users"
+        table = "im_integra_users"
 
     @staticmethod
     def save_users_list(pass_code, data):
@@ -185,14 +218,18 @@ class IntegraUser(SQLObject):
             except:
                 pass
 
+        return users
+
     @staticmethod
     def save_user(pass_code, data):
         user = User.read_user(data, pass_code)
 
+        print user._name
         integra_user = IntegraUser.select(IntegraUser.q.number==user._number).limit(1).getOne()
         integra_user.type = user._type
         integra_user.name = user._name
         integra_user.rights_1 = user._rights_1
         integra_user.rights_2 = user._rights_2
         integra_user.rights_3 = user._rights_3
+        integra_user.zones = str(user._zones)
 

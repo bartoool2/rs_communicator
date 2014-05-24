@@ -136,7 +136,7 @@ class Event:
         event_frame = Communicator.send_request(request_frame)
         event = Event()
 
-        if len(event_frame) == 15:
+        if event_frame[0] == Communicator.readEvent:
             binary_byte_1 = '{0:08b}'.format(event_frame[1])
             year_marker = binary_byte_1[0:2]
             z = binary_byte_1[2]
@@ -163,7 +163,7 @@ class Event:
             binary_byte_5 = '{0:08b}'.format(event_frame[5])
             partition_no = binary_byte_5[0:5]
             restore = binary_byte_5[5]
-            event_code = binary_byte_5[6:8]
+            event_code = binary_byte_5[5:8]
 
             event_code += '{0:08b}'.format(event_frame[6])
             event_code = int(event_code, 2)
@@ -175,27 +175,33 @@ class Event:
             object_no = binary_byte_8[0:3]
             user_control_no = binary_byte_8[3:8]
 
-            event._index = [event_frame[9], event_frame[10], event_frame[11]]
-            event._call_index = [event_frame[12], event_frame[13], event_frame[14]]
+            if index[0] == event_frame[-3] and index[1] == event_frame[-2] and index[2] == event_frame[-1]:
+                event._index = [event_frame[-6], event_frame[-5], event_frame[-4]]
+                event._call_index = [event_frame[-3], event_frame[-2], event_frame[-1]]
 
-            code_high_bitlist = [int(x) for x in list('{0:08b}'.format(event._code_high))]
-            code_low_bitlist = [int(x) for x in list('{0:08b}'.format(event._code_low))]
-            code_high_bitlist[0] = 1
+                code_high_bitlist = [int(x) for x in list('{0:08b}'.format(event._code_high))]
+                code_low_bitlist = [int(x) for x in list('{0:08b}'.format(event._code_low))]
+                code_high_bitlist[0] = 1
 
-            event._code_high = 0
-            event._code_low = 0
+                event._code_high = 0
+                event._code_low = 0
 
-            for bit in code_high_bitlist:
-                event._code_high = (event._code_high << 1) | bit
+                for bit in code_high_bitlist:
+                    event._code_high = (event._code_high << 1) | bit
 
-            for bit in code_low_bitlist:
-                event._code_low = (event._code_low << 1) | bit
+                for bit in code_low_bitlist:
+                    event._code_low = (event._code_low << 1) | bit
 
-            event._txt = Event.decode_event_txt(Communicator.send_request([Communicator.readEventTxt, event._code_high, event._code_low]))
+                event._txt = Event.decode_event_txt(Communicator.send_request([Communicator.readEventTxt, event._code_high, event._code_low]))
+            else:
+                print "Failed to read frame index. Frame given:"
+                print event_frame
+                return None
 
             return event
         else:
             print "Failed to read frame, retrying..."
+            print event_frame
 
         return None
 
@@ -206,11 +212,14 @@ class Event:
         if len(txt) >= 22:
             for i in range(6, len(txt)):
                 try:
-                    result_txt += str(unichr(txt[i]))
+                    result_txt += chr(txt[i]).decode('windows-1250')
+                    # result_txt += str(unichr(txt[i]))
+                    # print 'char: '+str(unichr(txt[i]))
+                    # print txt[i]
                 except UnicodeEncodeError:
                     continue
 
-        return result_txt
+        return result_txt.strip()
 
     @staticmethod
     def read_event_list(events_num = 1):
@@ -290,16 +299,6 @@ class User:
 
     @staticmethod
     def read_user(user_number, pass_code):
-        # data = [224,
-        #         255,
-        #         1, 1,
-        #         15, 0, 0, 0,
-        #         32,
-        #         0,
-        #         255, 255, 255,
-        #         83, 101, 114, 119, 105, 115, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-        #         255]
-
         pass_code_first_part = int('0x' + pass_code[0:2], 16)
         pass_code_second_part = int('0x' + pass_code[2:4], 16)
 
@@ -307,19 +306,23 @@ class User:
         user = User()
 
         user._number = data[1]
-        user._zones = Zone.zones_bytes_to_list([data[4], data[5], data[6], data[7]])
-        user._type = int(('{0:08b}'.format(data[8]))[4:8], 2)
+        user._zones = Zone.zones_bytes_to_list([data[2], data[3], data[4], data[5]])
+        user._type = int(('{0:08b}'.format(data[6]))[4:8], 2)
 
         user._rights_1 = data[9]
         user._rights_2 = data[10]
         user._rights_3 = data[11]
 
-        user._name = ''
+        temp_name = ''
         for i in range(12, 29):
             try:
-                user._name += str(unichr(data[i]))
-            except UnicodeEncodeError:
+                # user._name += str(unichr(data[i]))
+                print data[i]
+                temp_name += chr(data[i]).decode('windows-1250')
+            except:
                 continue
+
+        user._name = temp_name.strip()
 
         return user
 
