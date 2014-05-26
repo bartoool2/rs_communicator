@@ -14,23 +14,20 @@ class RsCom:
 
     def send_command(self):
         mysql = MySQL()
-        # print User.read_users_list("248", "5272")
-        username = [85,191,121,116,107,111,119,110,105,107,32,32,32,49,32,32,0]
-        temp_name = ''
-        for i in username:
-            try:
-                # user._name += str(unichr(data[i]))
-                temp_name += (chr(i).decode('windows-1250'))
-            except:
-                continue
-        print temp_name
+        mysql.start_app_process()
 
-        integra_user = IntegraUser.select(IntegraUser.q.number==1).limit(1).getOne()
-        integra_user.name = temp_name.encode('utf8')
+        # print User.read_user(6, '5272')
+        # test = json.loads(data)
+        # data = '{"zones":"[1,2]","type":0,"rights_1":4,"rights_2":2,"rights_3":1,"name":"Test"}'
+
+        # User.create_user('5272', data)
+        # for value in data['zones']:
+        #     print value
+
+
+        # users = IntegraUser.save_users_list('5272', '1')
         # for user in users:
         #     IntegraUser.save_user("5272", str(user))
-        # IntegraUser.save_user("5272", "1")
-        # name = [179, 179, 180, 82, 54]
 
         # byte_code = []
 
@@ -39,10 +36,9 @@ class RsCom:
             # print chr(i).decode('windows-1250')
             # chr(txt[i]).decode('windows-1250')
 
-        # Event.read_event_list()
+        # IntegraEvent.read_later_events(100)
         # string_append = ' append '
         # print string_append + chr(179).decode('windows-1250')
-        # mysql.start_app_process()
         # User.parse_user_data()
 
         # for i in range(9, 24):

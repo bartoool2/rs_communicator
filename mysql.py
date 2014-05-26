@@ -11,11 +11,32 @@ class MySQL:
     DB_PASS = 'KyuG73QK'
     DB_NAME = 'bstokro_intrs'
 
-    MAX_ZONES_STEP = 10
+    MAX_ZONES_STEP = 15
     MAX_USERS_STEP = 25
 
     QUERY_TYPE_SELECT = 0
     QUERY_TYPE_INSERT = 1
+
+    UNICODE_TRANSLATIONS = {
+        185: 0x61,
+        230: 0x63,
+        234: 0x65,
+        179: 0x6c,
+        241: 0x6e,
+        243: 0x6f,
+        156: 0x73,
+        159: 0x7a,
+        191: 0x7a,
+        165: 0x41,
+        198: 0x43,
+        202: 0x45,
+        163: 0x4c,
+        209: 0x4e,
+        211: 0x4f,
+        140: 0x53,
+        143: 0x5a,
+        175: 0x5a
+    }
 
     def __init__(self):
         connection = connectionForURI('mysql://' + MySQL.DB_USER + ':' + MySQL.DB_PASS + '@' + MySQL.DB_HOST + '/' + MySQL.DB_NAME)
@@ -91,12 +112,36 @@ class MySQL:
                     IntegraUser.save_users_list(request.pass_code, json.loads(request.additional_data))
                 except Exception:
                     pass
+            elif request.request_code == RequestStackItem.CODE_CREATE_USER:
+                print 'create user request received'
+                try:
+                    IntegraUser.create_user(request.pass_code, request.additional_data)
+                except Exception:
+                    pass
+            elif request.request_code == RequestStackItem.CODE_UPDATE_USER:
+                print 'update user request received'
+                try:
+                    IntegraUser.update_user(request.pass_code, request.additional_data)
+                except Exception:
+                    pass
             request.status = RequestStackItem.STATUS_DONE
             print 'request done'
             return True
         else:
             print 'no event returned'
             return False
+
+    @staticmethod
+    def decode_string(byte_list):
+        temp_name = ''
+
+        for byte in byte_list:
+            if byte in MySQL.UNICODE_TRANSLATIONS:
+                temp_name += chr(MySQL.UNICODE_TRANSLATIONS[byte]).decode('windows-1250')
+            else:
+                temp_name += chr(byte).decode('windows-1250')
+
+        return temp_name.strip()
 
     def start_app_process(self):
         print 'process started'
@@ -108,8 +153,7 @@ class MySQL:
             update_users_step += 1
 
             request_received = self.process_next_request()
-            if request_received:
-                time.sleep(5)
+            time.sleep(5)
 
             if update_zones_step == MySQL.MAX_ZONES_STEP and request_received is False:
                 print 'updating zones info'
@@ -154,6 +198,61 @@ class MySQL:
 
                 print 'users info updated'
 
+class IntegraEvent(SQLObject):
+
+    index_1 = IntCol(length=11)
+    index_2 = IntCol(length=11)
+    index_3 = IntCol(length=11)
+    call_index_1 = IntCol(length=11)
+    call_index_2 = IntCol(length=11)
+    call_index_3 = IntCol(length=11)
+    date = DateCol()
+    time = TimeCol()
+    description = StringCol(length=100)
+    event_class = IntCol(length=11)
+
+    class sqlmeta:
+         table = "im_events"
+
+    @staticmethod
+    def read_event_list(events_num = 1):
+        current_event = Event.get_event_by_index()
+        IntegraEvent(index_1=current_event._index[0], index_2=current_event._index[1], index_3=current_event._index[2],
+                     call_index_1=current_event._call_index[0], call_index_2=current_event._call_index[1], call_index_3=current_event._call_index[2],
+                     date=current_event._date, time=current_event._time+":00", description=MySQL.decode_string(current_event._txt), event_class=current_event._class)
+
+        for i in range(1, events_num):
+            if current_event != None:
+                current_event = Event.get_event_by_index(current_event._index)
+                IntegraEvent(index_1=current_event._index[0], index_2=current_event._index[1], index_3=current_event._index[2],
+                     call_index_1=current_event._call_index[0], call_index_2=current_event._call_index[1], call_index_3=current_event._call_index[2],
+                     date=current_event._date, time=current_event._time+":00", description=MySQL.decode_string(current_event._txt), event_class=current_event._class)
+            else:
+                break
+
+    @staticmethod
+    def read_later_events(events_num=1):
+        first_event = IntegraEvent.select().orderBy('id DESC').limit(1).getOne()
+
+        list = []
+        list.append(int(first_event.index_1))
+        list.append(int(first_event.index_2))
+        list.append(int(first_event.index_3))
+
+        current_event = Event.get_event_by_index(list)
+        IntegraEvent(index_1=current_event._index[0], index_2=current_event._index[1], index_3=current_event._index[2],
+                     call_index_1=current_event._call_index[0], call_index_2=current_event._call_index[1], call_index_3=current_event._call_index[2],
+                     date=current_event._date, time=current_event._time+":00", description=MySQL.decode_string(current_event._txt), event_class=current_event._class)
+
+        for i in range(1, events_num):
+            if current_event != None:
+                current_event = Event.get_event_by_index(current_event._index)
+                IntegraEvent(index_1=current_event._index[0], index_2=current_event._index[1], index_3=current_event._index[2],
+                     call_index_1=current_event._call_index[0], call_index_2=current_event._call_index[1], call_index_3=current_event._call_index[2],
+                     date=current_event._date, time=current_event._time+":00", description=MySQL.decode_string(current_event._txt), event_class=current_event._class)
+            else:
+                break
+
 
 class RequestStackItem(SQLObject):
 
@@ -164,6 +263,8 @@ class RequestStackItem(SQLObject):
     CODE_ARM = 2
     CODE_CLEAR_ALARM = 3
     CODE_READ_USERS_LIST = 4
+    CODE_CREATE_USER = 5
+    CODE_UPDATE_USER = 6
 
     request_code = IntCol(length=4)
     pass_code = StringCol(length=4)
@@ -227,9 +328,17 @@ class IntegraUser(SQLObject):
         print user._name
         integra_user = IntegraUser.select(IntegraUser.q.number==user._number).limit(1).getOne()
         integra_user.type = user._type
-        integra_user.name = user._name
+        integra_user.name = MySQL.decode_string(user._name)
         integra_user.rights_1 = user._rights_1
         integra_user.rights_2 = user._rights_2
         integra_user.rights_3 = user._rights_3
         integra_user.zones = str(user._zones)
+
+    @staticmethod
+    def create_user(pass_code, data):
+        User.create_user(pass_code, data)
+
+    @staticmethod
+    def update_user(pass_code, data):
+        User.update_user(pass_code, data)
 

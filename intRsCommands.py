@@ -1,9 +1,7 @@
+import json
 import time
 from datetime import date
 import serial
-import json
-import codecs
-import unicodedata as ud
 
 
 class Communicator:
@@ -15,6 +13,8 @@ class Communicator:
     arm = 0x80
     disarm = 0x84
     clear_alarm = 0x85
+    create_user = 0xE6
+    update_user = 0xE7
 
     armedPartitions = 0x0A
     partitionsEntryTime = 0x0E
@@ -126,6 +126,7 @@ class Event:
     _index = None
     _call_index = None
     _txt = None
+    _class = None
 
     def __init__(self):
         pass
@@ -148,7 +149,7 @@ class Event:
             event_year = event_year + year_diff
 
             binary_byte_2 = '{0:08b}'.format(event_frame[2])
-            event_class = binary_byte_2[0:3]
+            event._class = int(binary_byte_2[0:3], 2)
             day = binary_byte_2[3:8]
 
             binary_byte_3 = '{0:08b}'.format(event_frame[3])
@@ -207,31 +208,13 @@ class Event:
 
     @staticmethod
     def decode_event_txt(txt):
-        result_txt = ''
-
         if len(txt) >= 22:
-            for i in range(6, len(txt)):
-                try:
-                    result_txt += chr(txt[i]).decode('windows-1250')
-                    # result_txt += str(unichr(txt[i]))
-                    # print 'char: '+str(unichr(txt[i]))
-                    # print txt[i]
-                except UnicodeEncodeError:
-                    continue
+            try:
+                return txt[6:len(txt)]
+            except UnicodeEncodeError:
+                pass
 
-        return result_txt.strip()
-
-    @staticmethod
-    def read_event_list(events_num = 1):
-        current_event = Event.get_event_by_index()
-        print json.dumps(current_event, default=lambda o: o.__dict__)
-
-        for i in range(1, events_num):
-            if current_event != None:
-                current_event = Event.get_event_by_index(current_event._index)
-                print json.dumps(current_event, default=lambda o: o.__dict__)
-            else:
-                break
+        return []
 
 
 class Zone:
@@ -313,16 +296,7 @@ class User:
         user._rights_2 = data[10]
         user._rights_3 = data[11]
 
-        temp_name = ''
-        for i in range(12, 29):
-            try:
-                # user._name += str(unichr(data[i]))
-                print data[i]
-                temp_name += chr(data[i]).decode('windows-1250')
-            except:
-                continue
-
-        user._name = temp_name.strip()
+        user._name = data[12:29]
 
         return user
 
@@ -335,5 +309,58 @@ class User:
 
         return Zone.zones_bytes_to_list(users[2:32])
 
+    @staticmethod
+    def create_user(pass_code, data):
+        pass_code_first_part = int('0x' + pass_code[0:2], 16)
+        pass_code_second_part = int('0x' + pass_code[2:4], 16)
 
+        request_frame = [Communicator.create_user, pass_code_first_part, pass_code_second_part, 0, 0,  255, 0x12, 0x34, 0, 0, 0xFF, 0xFF]
+        request_frame = User.get_write_frame(request_frame, data)
+        request_frame.append(0)
+
+        print request_frame
+        Communicator.send_request(request_frame)
+
+    @staticmethod
+    def update_user(pass_code, data):
+        pass_code_first_part = int('0x' + pass_code[0:2], 16)
+        pass_code_second_part = int('0x' + pass_code[2:4], 16)
+
+        request_frame = [Communicator.update_user, pass_code_first_part, pass_code_second_part, 0, 0, 6, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
+        request_frame = User.get_write_frame(request_frame, data)
+
+        print request_frame
+        Communicator.send_request(request_frame)
+
+    @staticmethod
+    def get_write_frame(frame, data):
+        test = json.loads(data)
+        # data = '{"zones":"[1,2]","type":0,"rights_1":4,"rights_2":2,"rights_3":1,"name":"Test"}'
+        # test = json.loads(data)
+
+        zones_sum = 0
+        for s in test['zones']:
+            try:
+                zones_sum += int(s)
+            except:
+                pass
+
+        frame += [zones_sum, 0, 0, 0]
+        frame.append(test['type'])
+        frame.append(0)
+        frame.append(0)
+        frame += [test['rights_1'], test['rights_2'], test['rights_3']]
+
+        text = test['name']
+
+        text_bytes = []
+        for elem in text:
+            text_bytes.append(int(elem.encode('hex'), 16))
+
+        for i in range(0, (16 - len(text))):
+            text_bytes.append(32)
+
+        frame += text_bytes
+
+        return frame
 
